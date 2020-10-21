@@ -2,7 +2,7 @@ import json
 import re
 import nltk
 
-# from gensim.models import Word2Vec
+from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.stem.porter import PorterStemmer
 
