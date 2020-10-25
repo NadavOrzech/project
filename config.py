@@ -2,8 +2,13 @@ from enum import Enum
 
 class Config():
     def __init__(self):
-        self.input_path = "C:\\Users\\Dell\\Desktop\\Technion\\Project\\news-headlines-dataset-for-sarcasm-detection\\sarcasm_dataset.json"
+        # self.input_path = "C:\\Users\\Dell\\Desktop\\Technion\\Project\\news-headlines-dataset-for-sarcasm-detection\\sarcasm_dataset.json"
+        self.input_path = ".\\sarcasm_dataset_very_small.json"
         self.num_features = 10
+        self.num_epochs = 5
+        self.batch_size = 128
+        self.lr = 2e-5
+        self.test_size = 0.1
         self.features_map = {
             'punctuations': 0,
             'quotes': 1,
