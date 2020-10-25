@@ -44,7 +44,7 @@ class BertClassifier:
                 max_input = sent
             # to here
             encoded_dict = self.tokenizer.encode_plus(
-                sent, add_special_tokens=True, max_length=37, padding='max_length',
+                sent, add_special_tokens=True, max_length=66, padding='max_length',
                 return_attention_mask=True, return_tensors='pt',
             )
             input_ids.append(encoded_dict['input_ids'])
@@ -86,6 +86,7 @@ class BertClassifier:
     def train_epoch(self, train_dataloader, optimizer, device):
         total_train_accuracy = 0
         total_train_loss = 0
+        tp_tot, fp_tot, tn_tot, fn_tot = 0, 0, 0, 0
         self.model.train()
         pbar_file = sys.stdout
         pbar_name = "train_batch"
@@ -113,21 +114,30 @@ class BertClassifier:
                 optimizer.step()
 
                 logits = logits.detach().cpu()
-                y = b_labels.to('cpu')
-                y_pred = torch.argmax(logits, dim=1).unsqueeze(1)
+                y = b_labels.to('cpu').squeeze(1)
+                y_pred = torch.argmax(logits, dim=1) #.unsqueeze(1)
+                tp, fp, tn, fn = calculate_acc(y_pred, y)
+                tp_tot += tp
+                fp_tot += fp
+                tn_tot += tn
+                fn_tot += fn
                 total_train_accuracy += torch.sum(y_pred == y).float().item()
                 pbar.set_description(f'{pbar_name} ({loss.item():.3f})')
                 pbar.update()
-        avg_train_accuracy = total_train_accuracy / len(train_dataloader)
-        print("  Training accuracy: {0:.2f}".format(avg_train_accuracy))
+        avg_train_accuracy = (total_train_accuracy / len(train_dataloader.dataset))*100
+        #print("  Training accuracy: {0:.2f}".format(avg_train_accuracy))
+        print(f"accuracy={avg_train_accuracy:.3f}, tp: {tp_tot}, fp: {fp_tot}, tn: {tn_tot}, fn: {fn_tot}")
+        if tp_tot + fn_tot > 0:
+            print(f"Pos acc: {tp_tot / (tp_tot + fn_tot):.3f},  Neg acc: {tn_tot / (tn_tot + fp_tot):.3f}")
         avg_train_loss = total_train_loss / len(train_dataloader)
         # Log the Avg. train loss
-        print("  Training loss: {0:.2f}".format(avg_train_loss))
+        print("  Training loss: {0:.4f}".format(avg_train_loss))
 
     def test_epoch(self, test_dataloader, device):
         self.model.eval()
         total_eval_accuracy = 0
         total_eval_loss = 0
+        tp_tot, fp_tot, tn_tot, fn_tot = 0, 0, 0, 0
         # Evaluate data for one epoch
         pbar_file = sys.stdout
         pbar_name = "test_batch"
@@ -144,17 +154,25 @@ class BertClassifier:
                     logits = output.logits
                     total_eval_loss += loss.item()
                     logits = logits.detach().cpu()
-                    y = b_labels.to('cpu')
-                    y_pred = torch.argmax(logits, dim=1).unsqueeze(1)
+                    y = b_labels.to('cpu').squeeze(1)
+                    y_pred = torch.argmax(logits, dim=1)
+                    tp, fp, tn, fn = calculate_acc(y_pred, y)
+                    tp_tot += tp
+                    fp_tot += fp
+                    tn_tot += tn
+                    fn_tot += fn
                 total_eval_accuracy += torch.sum(y_pred == y).float().item()
                 pbar.set_description(f'{pbar_name} ({loss.item():.3f})')
                 pbar.update()
 
-        avg_val_accuracy = total_eval_accuracy / len(test_dataloader)
-        print("  Validation accuracy: {0:.2f}".format(avg_val_accuracy))
+        avg_val_accuracy = (total_eval_accuracy / len(test_dataloader.dataset))*100
+        # print("  Validation accuracy: {0:.2f}".format(avg_val_accuracy))
+        print(f"accuracy={avg_val_accuracy:.3f}, tp: {tp_tot}, fp: {fp_tot}, tn: {tn_tot}, fn: {fn_tot}")
+        if tp_tot + fn_tot > 0:
+            print(f"Pos acc: {tp_tot / (tp_tot + fn_tot):.3f},  Neg acc: {tn_tot / (tn_tot + fp_tot):.3f}")
         avg_val_loss = total_eval_loss / len(test_dataloader)
         # Log the Avg. validation accuracy
-        print("  Validation Loss: {0:.2f}".format(avg_val_loss))
+        print("  Validation Loss: {0:.4f}".format(avg_val_loss))
 
     def get_bert_classification(self):
         for i in range(0, len(self.head_lines_list), self.batch_size):
@@ -169,3 +187,19 @@ class BertClassifier:
             print(f"loss: {loss}")
             logits = output.logits
             print(f"logits:{logits}")
+
+def calculate_acc(y_pred, y):
+    """
+    Calculates the accuracy of predicted y vector
+    """
+    tp, fp, tn, fn = 0, 0, 0, 0
+    for i in range(y_pred.shape[0]):
+        if y_pred[i] == 0:
+            if y[i] == 0:
+                tn += 1
+            else: fn += 1
+        elif y[i] == 0:
+            fp += 1
+        else:
+            tp += 1
+    return tp, fp, tn, fn
