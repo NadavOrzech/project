@@ -3,10 +3,16 @@ from enum import Enum
 class Config():
     def __init__(self):
         # self.input_path = "C:\\Users\\Dell\\Desktop\\Technion\\Project\\news-headlines-dataset-for-sarcasm-detection\\sarcasm_dataset.json"
-        self.input_path = ".\\sarcasm_dataset_small.json"
+        self.input_path = ".\\sarcasm_dataset_v3.json"
         self.num_features = 10
         self.num_epochs = 5
-        self.batch_size = 128
+        self.batch_size = 4
+
+        self.hidden_dim = 200  # hidden dimention for LSTM layer
+        self.input_dim = 768  # input dimention for LSTM layer
+        self.lstm_dropout = 0.1  # dropout value for LSTM layer
+        self.dropout = 0.1                  # dropout value for FC layer
+
         self.lr = 2e-5
         self.test_size = 0.1
         self.features_map = {

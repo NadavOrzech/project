@@ -1,10 +1,13 @@
 from config import Config
 from BertClassifier import BertClassifier, create_data_list
 from BertEmbedder import BertEmbedder
+from torch.utils.data import TensorDataset
+import torch.nn as nn
+import torch.optim as optim
+from rnn import LSTMModel
 import torch
 from plot import plot_fit
 import os
-
 
 if __name__ == "__main__":
     config = Config()
@@ -33,3 +36,18 @@ if __name__ == "__main__":
         train_dataloader, test_dataloader = bert_classifier.get_dataloader(dataset)
         fit_result = bert_classifier.fit(train_dataloader, test_dataloader)
         #fig, axes = plot_fit(fit_result, 'Attention_graph', legend='total')
+
+
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # headlines_list, labels = create_data_list(config.input_path)
+    # bert_embedder = BertEmbedder(headlines_list, labels, config)
+    # embeddings, labels = bert_embedder.get_word_embeddings()
+    # dataset = TensorDataset(embeddings, labels)
+    # model = LSTMModel(config)
+    # model.to(device)
+    #
+    # train_dataloader, test_dataloader = model.get_dataloader(dataset)
+    # loss_fn = nn.CrossEntropyLoss()
+    # optimizer = optim.Adam(model.parameters(), lr=config.lr)
+    #
+    # model.fit(train_dataloader, test_dataloader, loss_fn, optimizer)
