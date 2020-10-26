@@ -6,6 +6,8 @@ import json
 import torch.optim as optim
 from torch.utils.data import TensorDataset, random_split, DataLoader, RandomSampler, SequentialSampler
 from transformers import BertTokenizer, BertForSequenceClassification
+from train_results import EpochResult, FitResult
+import os
 
 
 def create_data_list(input_path):
@@ -24,13 +26,35 @@ def create_data_list(input_path):
 
 
 class BertClassifier:
-    def __init__(self, headlines_list, labels, config):
+    def __init__(self, headlines_list, labels, config, checkpoint_file=None):
         self.config = config
         self.headlines_list = headlines_list
         self.labels = torch.tensor(labels).unsqueeze(1)
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.model = BertForSequenceClassification.from_pretrained('bert-base-uncased', return_dict=True)
         self.batch_size = self.config.batch_size
+        self.checkpoint_file = None
+        if checkpoint_file is not None:
+            checkpoint_dir = os.path.join('.', 'checkpoints')
+            if not os.path.isdir(checkpoint_dir):
+                os.mkdir(checkpoint_dir)
+            self.checkpoint_file = os.path.join(checkpoint_dir, checkpoint_file)
+
+    def save_checkpoint(self, fit_result):
+        torch.save(fit_result, self.checkpoint_file)
+
+    def load_checkpoint(self):
+        """
+        Load the init checkpoint file
+        :return: A tuple of:
+                    Best test accuracy for last checkpoint
+                    A EpochHeatMap object holds the attention map for all sequences for last checkpoint
+                    A FitResult object containing train and test losses per epoch for last checkpoint
+        """
+
+        print(f'=== Loading checkpoint {self.checkpoint_file}, ', end='')
+        data = torch.load(self.checkpoint_file, map_location=torch.device('cpu'))
+        return data
 
     def get_dataset(self):
         max_len = 0
@@ -72,6 +96,7 @@ class BertClassifier:
         return train_dataloader, test_dataloader
 
     def fit(self, train_dataloader: DataLoader, test_dataloader: DataLoader):
+        train_loss, train_acc, test_loss, test_acc = [], [], [], []
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(device)
         # model = self.model
@@ -80,10 +105,19 @@ class BertClassifier:
         epochs = self.config.num_epochs
         for epoch_i in range(0, epochs):
             print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, epochs))
-            self.train_epoch(train_dataloader, optimizer, device)
-            self.test_epoch(test_dataloader, device)
+            res_train = self.train_epoch(train_dataloader, optimizer, device)
+            train_loss.append(res_train[1])
+            train_acc.append(res_train[01])
+            res_test = self.test_epoch(test_dataloader, device)
+            test_loss.append(res_test[0])
+            test_acc.append(res_test[1])
+        fit_result = FitResult(epochs, train_loss, train_acc, test_loss, test_acc)
+        if self.checkpoint_file is not None:
+            self.save_checkpoint(fit_result)
+        return fit_result
 
     def train_epoch(self, train_dataloader, optimizer, device):
+        train_loss, train_acc, losses = [], [], []
         total_train_accuracy = 0
         total_train_loss = 0
         tp_tot, fp_tot, tn_tot, fn_tot = 0, 0, 0, 0
@@ -132,6 +166,7 @@ class BertClassifier:
         avg_train_loss = total_train_loss / len(train_dataloader)
         # Log the Avg. train loss
         print("  Training loss: {0:.4f}".format(avg_train_loss))
+        return EpochResult(avg_train_accuracy, avg_train_loss)
 
     def test_epoch(self, test_dataloader, device):
         self.model.eval()
@@ -173,6 +208,7 @@ class BertClassifier:
         avg_val_loss = total_eval_loss / len(test_dataloader)
         # Log the Avg. validation accuracy
         print("  Validation Loss: {0:.4f}".format(avg_val_loss))
+        return EpochResult(avg_val_loss, avg_val_accuracy)
 
     def get_bert_classification(self):
         for i in range(0, len(self.head_lines_list), self.batch_size):
