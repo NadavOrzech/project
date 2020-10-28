@@ -9,6 +9,7 @@ from transformers import BertTokenizer, BertForSequenceClassification
 from train_results import EpochResult, FitResult
 import os
 
+MAX_LEN = 66
 
 def create_data_list(input_path):
     with open(input_path, 'r') as file_json:
@@ -68,7 +69,7 @@ class BertClassifier:
                 max_input = sent
             # to here
             encoded_dict = self.tokenizer.encode_plus(
-                sent, add_special_tokens=True, max_length=66, padding='max_length',
+                sent, add_special_tokens=True, max_length=MAX_LEN, padding='max_length',
                 return_attention_mask=True, return_tensors='pt',
             )
             input_ids.append(encoded_dict['input_ids'])
@@ -106,8 +107,8 @@ class BertClassifier:
         for epoch_i in range(0, epochs):
             print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, epochs))
             res_train = self.train_epoch(train_dataloader, optimizer, device)
-            train_loss.append(res_train[1])
-            train_acc.append(res_train[01])
+            train_loss.append(res_train[0])
+            train_acc.append(res_train[1])
             res_test = self.test_epoch(test_dataloader, device)
             test_loss.append(res_test[0])
             test_acc.append(res_test[1])
@@ -166,7 +167,7 @@ class BertClassifier:
         avg_train_loss = total_train_loss / len(train_dataloader)
         # Log the Avg. train loss
         print("  Training loss: {0:.4f}".format(avg_train_loss))
-        return EpochResult(avg_train_accuracy, avg_train_loss)
+        return EpochResult(avg_train_loss, avg_train_accuracy)
 
     def test_epoch(self, test_dataloader, device):
         self.model.eval()

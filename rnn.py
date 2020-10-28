@@ -2,13 +2,15 @@ import torch
 import torch.nn as nn
 import sys
 import tqdm
+import os
 from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset, random_split, DataLoader, RandomSampler, SequentialSampler
 import torch.optim as optim
+from train_results import EpochResult, FitResult
 
 
 class LSTMModel(nn.Module):
-    def __init__(self, config, output_dim=2, num_layers=1):
+    def __init__(self, config, output_dim=2, num_layers=1, checkpoint_file=None):
         super().__init__()
         self.config = config
         self.input_dim = config.input_dim
@@ -17,6 +19,12 @@ class LSTMModel(nn.Module):
         self.num_layers = num_layers
         self.dropout = config.dropout
         self.batch_size = self.config.batch_size
+        self.checkpoint_file = None
+        if checkpoint_file is not None:
+            checpoint_dir = os.path.join('.', 'checkpoints')
+            if not os.path.isdir(checpoint_dir):
+                os.mkdir(checpoint_dir)
+            self.checkpoint_file = os.path.join(checpoint_dir, checkpoint_file)
 
         self.lstm = nn.LSTM(input_size=self.input_dim, hidden_size=self.hidden_dim, num_layers=self.num_layers,
                             dropout=config.lstm_dropout)
@@ -28,6 +36,22 @@ class LSTMModel(nn.Module):
             nn.Linear(in_features=self.hidden_dim, out_features=self.output_dim),
             nn.Sigmoid()
         )
+
+    def save_checkpoint(self, fit_result):
+        torch.save(fit_result, self.checkpoint_file)
+
+    def load_checkpoint(self):
+        """
+        Load the init checkpoint file
+        :return: A tuple of:
+                    Best test accuracy for last checkpoint
+                    A EpochHeatMap object holds the attention map for all sequences for last checkpoint
+                    A FitResult object containing train and test losses per epoch for last checkpoint
+        """
+
+        print(f'=== Loading checkpoint {self.checkpoint_file}, ', end='')
+        data = torch.load(self.checkpoint_file, map_location=torch.device('cpu'))
+        return data
 
     def get_dataloader(self, dataset):
         # Calculate the number of samples to include in each set.
@@ -58,6 +82,7 @@ class LSTMModel(nn.Module):
         # return y_pred
 
     def fit(self, train_dataloader: DataLoader, test_dataloader: DataLoader, loss_fn, optimizer):
+        train_loss, train_acc, test_loss, test_acc = [], [], [], []
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(device)
         # model = self.model
@@ -65,8 +90,16 @@ class LSTMModel(nn.Module):
         epochs = self.config.num_epochs
         for epoch_i in range(0, epochs):
             print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, epochs))
-            self.train_epoch(train_dataloader, optimizer, loss_fn, device)
-            self.test_epoch(test_dataloader, loss_fn, device)
+            res_train = self.train_epoch(train_dataloader, optimizer, loss_fn, device)
+            train_loss.append(res_train[0])
+            train_acc.append(res_train[1])
+            res_test = self.test_epoch(test_dataloader, loss_fn, device)
+            test_loss.append(res_test[0])
+            test_acc.append(res_test[1])
+        fit_result = FitResult(epochs, train_loss, train_acc, test_loss, test_acc)
+        if self.checkpoint_file is not None:
+            self.save_checkpoint(fit_result)
+        return fit_result
 
     def train_epoch(self, train_dataloader, optimizer, loss_fn, device):
         total_train_accuracy = 0
@@ -115,6 +148,7 @@ class LSTMModel(nn.Module):
         avg_train_loss = total_train_loss / len(train_dataloader)
         # Log the Avg. train loss
         print("  Training loss: {0:.4f}".format(avg_train_loss))
+        return EpochResult(avg_train_loss, avg_train_accuracy)
 
     def test_epoch(self, test_dataloader, loss_fn, device):
         total_eval_accuracy = 0
@@ -156,7 +190,7 @@ class LSTMModel(nn.Module):
             avg_val_loss = total_eval_loss / len(test_dataloader)
             # Log the Avg. validation accuracy
             print("  Validation Loss: {0:.4f}".format(avg_val_loss))
-
+            return EpochResult(avg_val_loss, avg_val_accuracy)
 
 def calculate_acc(y_pred, y):
     """
