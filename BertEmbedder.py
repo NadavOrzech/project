@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 from transformers import BertTokenizer, BertModel
@@ -21,27 +22,32 @@ class BertEmbedder:
         taking the second to last layer and more..
         :return: sent_vecs_sum - a t
         """
-        input_ids = []
         max_len = MAX_LEN
-        for sent in self.headlines_list:
-            encoded_dict = self.tokenizer.encode_plus(
-                sent, add_special_tokens=True, max_length=max_len, padding='max_length',
-                return_attention_mask=True, return_tensors='pt',
-            )
-            input_ids.append(encoded_dict['input_ids'])
-        input_ids = torch.cat(input_ids, dim=0)
+        if os.path.isfile('token_embeddings.pt'):
+            token_embeddings = torch.load('token_embeddings.pt')
+        else:
+            input_ids = []
+            for sent in self.headlines_list:
+                encoded_dict = self.tokenizer.encode_plus(
+                    sent, add_special_tokens=True, max_length=max_len, padding='max_length',
+                    return_attention_mask=True, return_tensors='pt',
+                )
+                input_ids.append(encoded_dict['input_ids'])
+            input_ids = torch.cat(input_ids, dim=0)
 
-        # Put the model in "evaluation" mode, meaning feed-forward operation.
-        self.model.eval()
-        with torch.no_grad():
-            # first loop over the tokens to get hidden dims from the BertModel
-            token_embeddings = torch.Tensor()
-            for i in range(0, input_ids.shape[0], self.config.batch_size):
-                outputs = self.model(input_ids[i: i + self.config.batch_size])
-                hidden_states = outputs[2]
-                partial_token_embeddings = torch.stack(hidden_states, dim=0)
-                partial_token_embeddings = partial_token_embeddings.permute(1, 2, 0, 3)
-                token_embeddings = torch.cat((token_embeddings, partial_token_embeddings), dim=0)
+            # Put the model in "evaluation" mode, meaning feed-forward operation.
+            self.model.eval()
+            with torch.no_grad():
+                # first loop over the tokens to get hidden dims from the BertModel
+                token_embeddings = torch.Tensor()
+                for i in range(0, input_ids.shape[0], self.config.batch_size):
+                    outputs = self.model(input_ids[i: i + self.config.batch_size])
+                    hidden_states = outputs[2]
+                    partial_token_embeddings = torch.stack(hidden_states, dim=0)
+                    partial_token_embeddings = partial_token_embeddings.permute(1, 2, 0, 3)
+                    token_embeddings = torch.cat((token_embeddings, partial_token_embeddings), dim=0)
+            torch.save(token_embeddings, 'token_embeddings.pt')
+
         sent_vecs_sum = np.zeros((token_embeddings.shape[0], max_len, 768)) # in the end should be size (num_samples, max_length, 768)
         for i, sentence in enumerate(token_embeddings):
             for j, token in enumerate(sentence):
@@ -54,27 +60,32 @@ class BertEmbedder:
         return sent_vecs_sum, self.labels
 
     def get_sentence_embeddings(self):
-        input_ids = []
         max_len = MAX_LEN
-        for sent in self.headlines_list:
-            encoded_dict = self.tokenizer.encode_plus(
-                sent, add_special_tokens=True, max_length=max_len, padding='max_length',
-                return_attention_mask=True, return_tensors='pt',
-            )
-            input_ids.append(encoded_dict['input_ids'])
-        input_ids = torch.cat(input_ids, dim=0)
+        if os.path.isfile('token_embeddings.pt'):
+            token_embeddings = torch.load('token_embeddings.pt')
+        else:
+            input_ids = []
+            for sent in self.headlines_list:
+                encoded_dict = self.tokenizer.encode_plus(
+                    sent, add_special_tokens=True, max_length=max_len, padding='max_length',
+                    return_attention_mask=True, return_tensors='pt',
+                )
+                input_ids.append(encoded_dict['input_ids'])
+            input_ids = torch.cat(input_ids, dim=0)
 
-        # Put the model in "evaluation" mode, meaning feed-forward operation.
-        self.model.eval()
-        with torch.no_grad():
-            # first loop over the tokens to get hidden dims from the BertModel
-            token_embeddings = torch.Tensor()
-            for i in range(0, input_ids.shape[0], self.config.batch_size):
-                outputs = self.model(input_ids[i: i + self.config.batch_size])
-                hidden_states = outputs[2]
-                partial_token_embeddings = torch.stack(hidden_states, dim=0)
-                partial_token_embeddings = partial_token_embeddings.permute(1, 0, 2, 3)
-                token_embeddings = torch.cat((token_embeddings, partial_token_embeddings), dim=0)
+            # Put the model in "evaluation" mode, meaning feed-forward operation.
+            self.model.eval()
+            with torch.no_grad():
+                # first loop over the tokens to get hidden dims from the BertModel
+                token_embeddings = torch.Tensor()
+                for i in range(0, input_ids.shape[0], self.config.batch_size):
+                    outputs = self.model(input_ids[i: i + self.config.batch_size])
+                    hidden_states = outputs[2]
+                    partial_token_embeddings = torch.stack(hidden_states, dim=0)
+                    partial_token_embeddings = partial_token_embeddings.permute(1, 0, 2, 3)
+                    token_embeddings = torch.cat((token_embeddings, partial_token_embeddings), dim=0)
+            torch.save(token_embeddings, 'token_embeddings.pt')
+
         sent_vecs_avg = np.zeros((token_embeddings.shape[0], 768))  # in the end should be size (num_samples, 768)
         for i, sentence in enumerate(token_embeddings):
             token_vecs = sentence[-2]
