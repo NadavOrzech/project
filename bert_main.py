@@ -16,10 +16,10 @@ RNN_CLASSIFIER = "RNN_classifier"
 CNN_CLASSIFIER = "CNN_classifier"
 
 
-def plot_graphs():
+def plot_graphs(classifier_name):
     fit_result = None
     checkpoint_dir = os.path.join('.', 'checkpoints')
-    checkpoint_file = os.path.join(checkpoint_dir, CNN_CLASSIFIER)
+    checkpoint_file = os.path.join(checkpoint_dir, classifier_name)
     if os.path.isfile(checkpoint_file):  # Loading the checkpoints if the models already trained with the same hyperparameters
         fit_result = torch.load(checkpoint_file, map_location=torch.device('cpu'))
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -67,7 +67,7 @@ def run_cnn(config):
 
 if __name__ == "__main__":
     config = Config()
-    # plot_graphs()
+    plot_graphs(RNN_CLASSIFIER)  # needs to  insert classifier name
     # run_bert_classifier(config)
-    run_cnn(config)
+    # run_cnn(config)
 
