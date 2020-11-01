@@ -99,6 +99,10 @@ class LSTMModel(nn.Module):
         fit_result = FitResult(epochs, train_loss, train_acc, test_loss, test_acc)
         if self.checkpoint_file is not None:
             self.save_checkpoint(fit_result)
+        print(f"train loss: {train_loss}")
+        print(f"train acc: {train_acc}")
+        print(f"test loss: {test_loss}")
+        print(f"test acc: {test_acc}")
         return fit_result
 
     def train_epoch(self, train_dataloader, optimizer, loss_fn, device):

@@ -67,7 +67,8 @@ def run_cnn(config):
 
 if __name__ == "__main__":
     config = Config()
-    plot_graphs(RNN_CLASSIFIER)  # needs to  insert classifier name
+    # plot_graphs(RNN_CLASSIFIER)  # needs to  insert classifier name
     # run_bert_classifier(config)
     # run_cnn(config)
+    run_rnn(config)
 
