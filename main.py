@@ -14,7 +14,21 @@ if __name__ == "__main__":
     dataloader = Dataloader(config)
     # word1 = create_word2vec(words_list)
     # x_data = create_tfidf(words_list)
-    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(dataloader.x, dataloader.all_labels, test_size=TEST_SIZE, random_state=RANDOM_STATE)
-    training.bernoulli_model(X_train, X_test, y_train, y_test)
-    training.KNN_model(X_train, X_test, y_train, y_test)
-    training.SVM_model(X_train, X_test, y_train, y_test)
+    # X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(dataloader.all, dataloader.all_labels, test_size=TEST_SIZE, random_state=RANDOM_STATE)
+    
+    x_train, y_train = dataloader.get_train_dataloader()
+    x_test, y_test = dataloader.get_test_dataloader()
+
+    print("Results with common sarcstic words: ")
+    training.bernoulli_model(x_train, x_test, y_train, y_test)
+    training.KNN_model(x_train, x_test, y_train, y_test)
+    training.SVM_model(x_train, x_test, y_train, y_test)
+
+    x_train_tfidf, y_train_tfidf = dataloader.get_train_dataloader(tfidf=True)
+    x_test_tfidf, y_test_tfidf = dataloader.get_test_dataloader(tfidf=True)
+    
+    print()
+    print("Results with common sarcstic words + TF-IDF: ")
+    training.bernoulli_model(x_train_tfidf, x_test_tfidf, y_train_tfidf, y_test_tfidf)
+    training.KNN_model(x_train_tfidf, x_test_tfidf, y_train_tfidf, y_test_tfidf)
+    training.SVM_model(x_train_tfidf, x_test_tfidf, y_train_tfidf, y_test_tfidf)

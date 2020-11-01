@@ -19,7 +19,8 @@ class Dataloader():
         self.intensifiers = params.intensifiers
 
         self.all_words, self.all_labels = self.create_data_list()
-        self.x_train, self.x_test, self.y_train, self.y_test = sklearn.model_selection.train_test_split(self.all_words, self.all_labels, test_size=0.15, random_state=42)
+        self.tfidf_matrix = self.generate_tfidf_matrix()
+        self.x_train, self.x_test, self.y_train, self.y_test, self.tfidf_train, self.tfidf_test = sklearn.model_selection.train_test_split(self.all_words, self.all_labels, self.tfidf_matrix, test_size=0.15, random_state=42)
         
         self.sarcastic_common_words = None
         self.not_sarcastic_common_words = None
@@ -44,16 +45,36 @@ class Dataloader():
 
         return all_words, all_labels
     
+    def generate_tfidf_matrix(self):
+        all_words_list = []
+        for i,sentence in enumerate(self.all_words):
+            processed_article = re.sub('[^a-zA-Z]', ' ', sentence)
+            processed_article = re.sub(r'\s+', ' ', processed_article)
+            words_list = nltk.word_tokenize(processed_article) 
+            all_words_list.append(words_list)       
+        
+        tfidf_matrix = create_tfidf(all_words_list)
+
+        return tfidf_matrix
+
     def get_train_dataloader(self, tfidf=False):
-        features_matix =  self.generate_features_matrix(self.x_train, tfidf)
+        if tfidf:
+            features_matix =  self.generate_features_matrix(self.x_train, self.tfidf_train)
+        else:
+            features_matix =  self.generate_features_matrix(self.x_train)
+
         return features_matix, self.y_train
 
     def get_test_dataloader(self, tfidf=False):
-        features_matix = self.generate_features_matrix(self.x_test, tfidf)
+        if tfidf:
+            features_matix = self.generate_features_matrix(self.x_test, self.tfidf_test)
+        else:
+            features_matix = self.generate_features_matrix(self.x_test)
+
         return features_matix, self.y_test
 
 
-    def generate_features_matrix(self, sentences_list, tfidf):
+    def generate_features_matrix(self, sentences_list, tfidf_matrix=None):
         features_matrix = np.zeros((len(sentences_list),self.num_features))
         all_words_list = []
 
@@ -118,8 +139,7 @@ class Dataloader():
             
             all_words_list.append(words_list)       
         
-        if tfidf:
-            tfidf_matrix = create_tfidf(all_words_list)
+        if tfidf_matrix is not None:
             features_matrix = np.concatenate((features_matrix,tfidf_matrix), axis=1)
 
         return features_matrix
@@ -182,8 +202,6 @@ def create_tfidf(all_words_list):
     return tfidf
 
 
-# nltk.download('movie_reviews')
-# nltk.download('punkt')
 if __name__ == "__main__":
     params = Config()
     dataloader = Dataloader(params)

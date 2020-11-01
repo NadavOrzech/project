@@ -18,11 +18,15 @@ class Config():
         self.features_map = {
             'punctuations': 0,
             'quotes': 1,
-            'polarity': 2,
-            'subjectivity': 3,
-            'intersifier': 4,
+            'adjectives': 2,
+            'adverbs': 3,
+            'interjections': 4,
             'interjection': 5,
-            'sentence_length': 6,
+            'positive_word': 6,
+            'negative_word': 7,
+            'sentence_length':8,
+            'common_sarcastic': 9,
+            'common_not_sarcastic': 10,
 
         }
         self.interjections = ["cheers",
