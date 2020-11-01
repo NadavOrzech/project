@@ -36,12 +36,12 @@ def run_bert_classifier(config):
     fig, axes = plot_fit(fit_result, 'Bert classifier graph', legend='total')
 
 
-def run_rnn(config):
+def run_LSTM(config):
     headlines_list, labels = create_data_list(config.input_path)
     bert_embedder = BertEmbedder(headlines_list, labels, config)
     embeddings, labels = bert_embedder.get_word_embeddings()
     dataset = TensorDataset(embeddings, labels)
-    model = LSTMModel(config, RNN_CLASSIFIER)
+    model = LSTMModel(config, checkpoint_file=RNN_CLASSIFIER)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     train_dataloader, test_dataloader = model.get_dataloader(dataset)
@@ -70,5 +70,5 @@ if __name__ == "__main__":
     # plot_graphs(RNN_CLASSIFIER)  # needs to  insert classifier name
     # run_bert_classifier(config)
     # run_cnn(config)
-    run_rnn(config)
+    run_LSTM(config)
 

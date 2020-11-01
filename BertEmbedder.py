@@ -61,8 +61,8 @@ class BertEmbedder:
 
     def get_sentence_embeddings(self):
         max_len = MAX_LEN
-        if os.path.isfile('token_embeddings.pt'):
-            token_embeddings = torch.load('token_embeddings.pt')
+        if os.path.isfile('sentence_embeddings.pt'):
+            token_embeddings = torch.load('sentence_embeddings.pt')
         else:
             input_ids = []
             for sent in self.headlines_list:
@@ -84,7 +84,7 @@ class BertEmbedder:
                     partial_token_embeddings = torch.stack(hidden_states, dim=0)
                     partial_token_embeddings = partial_token_embeddings.permute(1, 0, 2, 3)
                     token_embeddings = torch.cat((token_embeddings, partial_token_embeddings), dim=0)
-            torch.save(token_embeddings, 'token_embeddings.pt')
+            torch.save(token_embeddings, 'sentence_embeddings.pt')
 
         sent_vecs_avg = np.zeros((token_embeddings.shape[0], 768))  # in the end should be size (num_samples, 768)
         for i, sentence in enumerate(token_embeddings):
