@@ -11,7 +11,7 @@ import sklearn
 
 
 class Dataloader():
-    def __init__(self, params):
+    def __init__(self, params, generate_tfidf=True):
         self.input_path = params.input_path
         self.num_features = len(params.features_map)
         self.features_map = params.features_map
@@ -19,9 +19,13 @@ class Dataloader():
         self.intensifiers = params.intensifiers
 
         self.all_words, self.all_labels = self.create_data_list()
-        self.tfidf_matrix = self.generate_tfidf_matrix()
-        self.x_train, self.x_test, self.y_train, self.y_test, self.tfidf_train, self.tfidf_test = sklearn.model_selection.train_test_split(self.all_words, self.all_labels, self.tfidf_matrix, test_size=0.15, random_state=42)
-        
+        if generate_tfidf:
+            self.tfidf_matrix = self.generate_tfidf_matrix()
+            self.x_train, self.x_test, self.y_train, self.y_test, self.tfidf_train, self.tfidf_test = sklearn.model_selection.train_test_split(self.all_words, self.all_labels, self.tfidf_matrix, test_size=0.15, random_state=42)
+        else:
+            self.x_train, self.x_test, self.y_train, self.y_test = sklearn.model_selection.train_test_split(self.all_words, self.all_labels, test_size=0.15, random_state=42)
+
+
         self.sarcastic_common_words = None
         self.not_sarcastic_common_words = None
         self.get_common_words(self.x_train,self.y_train)

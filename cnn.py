@@ -22,17 +22,19 @@ class CNNModel(nn.Module):
                 os.mkdir(checkpoint_dir)
             self.checkpoint_file = os.path.join(checkpoint_dir, checkpoint_file)
 
-        self.model1 = nn.Sequential(nn.Conv1d(in_channels=self.input_size, out_channels=200, kernel_size=3,
-                                              padding=1, bias=True),
+        self.model1 = nn.Sequential(nn.Conv1d(in_channels=self.input_size, out_channels=400, kernel_size=3, bias=True),
                                     nn.ReLU(),
                                     nn.MaxPool2d(kernel_size=2)
                                     )
-        self.model2 = nn.Sequential(nn.Conv1d(in_channels=100, out_channels=50, kernel_size=3,
-                                              padding=1, bias=True),
+        self.model2 = nn.Sequential(nn.Conv1d(in_channels=200, out_channels=100, kernel_size=2, bias=True),
+                                    nn.ReLU(),
+                                    nn.MaxPool2d(kernel_size=2),
+                                    )
+        self.model3 = nn.Sequential(nn.Conv1d(in_channels=50, out_channels=50, kernel_size=2, bias=True),
                                     nn.ReLU(),
                                     nn.MaxPool2d(kernel_size=4),
                                     )
-        self.model3 = nn.Sequential(nn.Linear(in_features=1152, out_features=100),
+        self.model4 = nn.Sequential(nn.Linear(in_features=564, out_features=100),
                                     nn.ReLU(),
                                     nn.Linear(in_features=100, out_features=self.output_dim)
                                     )
@@ -67,8 +69,9 @@ class CNNModel(nn.Module):
     def forward(self, x):
         out = self.model1(x)
         out = self.model2(out)
-        out = out.view(out.size(0), -1)
         out = self.model3(out)
+        out = out.view(out.size(0), -1)
+        out = self.model4(out)
         return out
 
     def fit(self, train_dataloader: DataLoader, test_dataloader: DataLoader, loss_fn, optimizer):
@@ -167,18 +170,18 @@ class CNNModel(nn.Module):
                     tn_tot += tn
                     fn_tot += fn
 
-                    total_eval_accuracy += torch.sum(y_pred == y).float().item()
-                    pbar.set_description(f'{pbar_name} ({loss.item():.3f})')
-                    pbar.update()
+                total_eval_accuracy += torch.sum(y_pred == y).float().item()
+                pbar.set_description(f'{pbar_name} ({loss.item():.3f})')
+                pbar.update()
 
-            avg_val_accuracy = (total_eval_accuracy / len(test_dataloader.dataset)) * 100
-            print(f"  accuracy={avg_val_accuracy:.3f}, tp: {tp_tot}, fp: {fp_tot}, tn: {tn_tot}, fn: {fn_tot}")
-            # if tp_tot + fn_tot > 0:
-            #     print(f"Pos acc: {tp_tot / (tp_tot + fn_tot):.3f},  Neg acc: {tn_tot / (tn_tot + fp_tot):.3f}")
-            avg_val_loss = total_eval_loss / len(test_dataloader)
-            # Log the Avg. validation accuracy
-            print("  Validation Loss: {0:.4f}".format(avg_val_loss))
-            return EpochResult(avg_val_loss, avg_val_accuracy)
+        avg_val_accuracy = (total_eval_accuracy / len(test_dataloader.dataset)) * 100
+        print(f"  accuracy={avg_val_accuracy:.3f}, tp: {tp_tot}, fp: {fp_tot}, tn: {tn_tot}, fn: {fn_tot}")
+        # if tp_tot + fn_tot > 0:
+        #     print(f"Pos acc: {tp_tot / (tp_tot + fn_tot):.3f},  Neg acc: {tn_tot / (tn_tot + fp_tot):.3f}")
+        avg_val_loss = total_eval_loss / len(test_dataloader)
+        # Log the Avg. validation accuracy
+        print("  Validation Loss: {0:.4f}".format(avg_val_loss))
+        return EpochResult(avg_val_loss, avg_val_accuracy)
 
 def calculate_acc(y_pred, y):
     """

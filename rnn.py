@@ -21,10 +21,10 @@ class LSTMModel(nn.Module):
         self.batch_size = self.config.batch_size
         self.checkpoint_file = None
         if checkpoint_file is not None:
-            checpoint_dir = os.path.join('.', 'checkpoints')
-            if not os.path.isdir(checpoint_dir):
-                os.mkdir(checpoint_dir)
-            self.checkpoint_file = os.path.join(checpoint_dir, checkpoint_file)
+            checkpoint_dir = os.path.join('.', 'checkpoints')
+            if not os.path.isdir(checkpoint_dir):
+                os.mkdir(checkpoint_dir)
+            self.checkpoint_file = os.path.join(checkpoint_dir, checkpoint_file)
 
         self.lstm = nn.LSTM(input_size=self.input_dim, hidden_size=self.hidden_dim, num_layers=self.num_layers,
                             dropout=config.lstm_dropout)
@@ -99,10 +99,10 @@ class LSTMModel(nn.Module):
         fit_result = FitResult(epochs, train_loss, train_acc, test_loss, test_acc)
         if self.checkpoint_file is not None:
             self.save_checkpoint(fit_result)
-        print(f"train loss: {train_loss}")
-        print(f"train acc: {train_acc}")
-        print(f"test loss: {test_loss}")
-        print(f"test acc: {test_acc}")
+        # print(f"train loss: {train_loss}")
+        # print(f"train acc: {train_acc}")
+        # print(f"test loss: {test_loss}")
+        # print(f"test acc: {test_acc}")
         return fit_result
 
     def train_epoch(self, train_dataloader, optimizer, loss_fn, device):
@@ -183,18 +183,18 @@ class LSTMModel(nn.Module):
                     tn_tot += tn
                     fn_tot += fn
 
-                    total_eval_accuracy += torch.sum(y_pred == y).float().item()
-                    pbar.set_description(f'{pbar_name} ({loss.item():.3f})')
-                    pbar.update()
+                total_eval_accuracy += torch.sum(y_pred == y).float().item()
+                pbar.set_description(f'{pbar_name} ({loss.item():.3f})')
+                pbar.update()
 
-            avg_val_accuracy = (total_eval_accuracy / len(test_dataloader.dataset)) * 100
-            print(f"  accuracy={avg_val_accuracy:.3f}, tp: {tp_tot}, fp: {fp_tot}, tn: {tn_tot}, fn: {fn_tot}")
-            # if tp_tot + fn_tot > 0:
-            #     print(f"Pos acc: {tp_tot / (tp_tot + fn_tot):.3f},  Neg acc: {tn_tot / (tn_tot + fp_tot):.3f}")
-            avg_val_loss = total_eval_loss / len(test_dataloader)
-            # Log the Avg. validation accuracy
-            print("  Validation Loss: {0:.4f}".format(avg_val_loss))
-            return EpochResult(avg_val_loss, avg_val_accuracy)
+        avg_val_accuracy = (total_eval_accuracy / len(test_dataloader.dataset)) * 100
+        print(f"  accuracy={avg_val_accuracy:.3f}, tp: {tp_tot}, fp: {fp_tot}, tn: {tn_tot}, fn: {fn_tot}")
+        # if tp_tot + fn_tot > 0:
+        #     print(f"Pos acc: {tp_tot / (tp_tot + fn_tot):.3f},  Neg acc: {tn_tot / (tn_tot + fp_tot):.3f}")
+        avg_val_loss = total_eval_loss / len(test_dataloader)
+        # Log the Avg. validation accuracy
+        print("  Validation Loss: {0:.4f}".format(avg_val_loss))
+        return EpochResult(avg_val_loss, avg_val_accuracy)
 
 def calculate_acc(y_pred, y):
     """

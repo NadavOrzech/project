@@ -21,14 +21,13 @@ class Config():
             'adjectives': 2,
             'adverbs': 3,
             'interjections': 4,
-            'interjection': 5,
-            'positive_word': 6,
-            'negative_word': 7,
-            'sentence_length':8,
-            'common_sarcastic': 9,
-            'common_not_sarcastic': 10,
-
+            'positive_word': 5,
+            'negative_word': 6,
+            'sentence_length':7,
+            'common_sarcastic': 8,
+            'common_not_sarcastic': 9,
         }
+        
         self.interjections = ["cheers",
                             "aha",
                             "wow",
