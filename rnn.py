@@ -116,7 +116,9 @@ class LSTMModel(nn.Module):
                        file=pbar_file) as pbar:
             for step, batch in enumerate(train_dataloader):
                 X, y = batch[0], batch[1]
-
+                if y.shape[0] == 1:
+                    continue
+                
                 # Forward pass
                 # X = torch.transpose(X, dim0=0, dim1=1)
                 X = X.to(device)
@@ -166,7 +168,8 @@ class LSTMModel(nn.Module):
                        file=pbar_file) as pbar:
             for batch in test_dataloader:
                 X, y = batch[0], batch[1]
-
+                if y.shape[0] == 1:
+                    continue
                 # Forward pass
                 with torch.no_grad():
                     X = X.to(device)

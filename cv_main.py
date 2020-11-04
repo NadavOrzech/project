@@ -35,8 +35,8 @@ if __name__ == "__main__":
         'model_name': 'DCT',
         'min_samples_split': [1,2,5,10]
     }
-    scores = training.cross_validation(x_train,y_train,knn_cv_dict,features_permute=True,powerset_size=7)
-    scores = training.cross_validation(x_train,y_train,decision_tree_cv_dict,features_permute=True)
+    # scores = training.cross_validation(x_train,y_train,knn_cv_dict,features_permute=True,powerset_size=7)
+    # scores = training.cross_validation(x_train,y_train,decision_tree_cv_dict,features_permute=True)
     scores = training.cross_validation(x_train,y_train,svm_cv_dict,features_permute=True)
 
     aaa=2
