@@ -30,7 +30,8 @@ class BertClassifier:
     def __init__(self, headlines_list, labels, config, checkpoint_file=None):
         self.config = config
         self.headlines_list = headlines_list
-        self.labels = torch.tensor(labels).unsqueeze(1)
+        if labels:
+            self.labels = torch.tensor(labels).unsqueeze(1)
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.model = BertForSequenceClassification.from_pretrained('bert-base-uncased', return_dict=True)
         self.batch_size = self.config.batch_size
@@ -41,8 +42,14 @@ class BertClassifier:
                 os.mkdir(checkpoint_dir)
             self.checkpoint_file = os.path.join(checkpoint_dir, checkpoint_file)
 
+            if os.path.isfile(self.checkpoint_file):
+                saved_state = torch.load(self.checkpoint_filename,map_location=self.device)
+                self.model.load_state_dict(saved_state['model_state'])
+    
     def save_checkpoint(self, fit_result):
-        torch.save(fit_result, self.checkpoint_file)
+        saved_state = dict(fit_result=fit_result,
+                           model_state=self.model.state_dict())
+        torch.save(saved_state, self.checkpoint_file)
 
     def load_checkpoint(self):
         """
@@ -96,10 +103,29 @@ class BertClassifier:
         test_dataloader = DataLoader(test_dataset, sampler=SequentialSampler(test_dataset), batch_size=self.batch_size)
         return train_dataloader, test_dataloader
 
+    def inference(self, sentence):
+        input_ids_len = self.tokenizer.encode(sentence, add_special_tokens=True)
+            
+        encoded_dict = self.tokenizer.encode_plus(
+            sent, add_special_tokens=True, return_attention_mask=True, return_tensors='pt',
+        )
+        b_input_ids = encoded_dict['input_ids'].to(device)
+        b_input_mask = encoded_dict['attention_mask'].to(device)
+
+        with torch.no_grad():
+            output = self.model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask)
+            logits = output.logits
+            logits = logits.detach().cpu()
+            
+            y_pred = torch.argmax(logits, dim=1)
+
+            return y_pred
+
     def fit(self, train_dataloader: DataLoader, test_dataloader: DataLoader):
         train_loss, train_acc, test_loss, test_acc = [], [], [], []
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(device)
+
         # model = self.model
         self.model.to(device)
         optimizer = optim.Adam(self.model.parameters(), lr=self.config.lr)

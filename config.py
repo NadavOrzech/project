@@ -3,9 +3,9 @@ from enum import Enum
 class Config():
     def __init__(self):
         # self.input_path = "C:\\Users\\Dell\\Desktop\\Technion\\Project\\news-headlines-dataset-for-sarcasm-detection\\sarcasm_dataset.json"
-        self.input_path = ".\\sarcasm_dataset_v3.json"
+        self.input_path = "./sarcasm_dataset_v4.json"
         self.num_features = 10
-        self.num_epochs = 5
+        self.num_epochs = 10
         self.batch_size = 4
 
         self.hidden_dim = 200  # hidden dimention for LSTM layer
