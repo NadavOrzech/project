@@ -16,17 +16,28 @@ def powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
-def cross_validation(X_train, y_train, cv_params, features_permute=False,powerset_size=None):
+def cross_validation(X_train, y_train, cv_params, features_permute=False,powerset_size=None, specific_subset=None):
     total_scores = {}
     features_list = [list(range(X_train.shape[1]))]
     if powerset_size is None:
-        powerset_size=X_train.shape[1]
+        powerset_size=[X_train.shape[1]]
     if features_permute:
         features_list = list(powerset(range(X_train.shape[1])))
     if cv_params['model_name'] == "KNN":
-        for features_comb in features_list[1:]:
-            if len(features_comb) != powerset_size:
-                continue
+        if specific_subset is None:
+            for features_comb in features_list[1:]:
+                if len(features_comb) not in powerset_size:
+                    continue
+                total_scores[str(features_comb)] = {}
+                for k in cv_params['k_list']:
+                    model = KNeighborsClassifier(n_neighbors=k)
+                    scores = cross_val_score(model, X_train[:,features_comb], y_train, cv=10)
+                    total_scores[str(features_comb)]['k{}'.format(k)] = {
+                        'mean': scores.mean(),
+                        'std': scores.std(),
+                    }
+        else:
+            features_comb = specific_subset
             total_scores[str(features_comb)] = {}
             for k in cv_params['k_list']:
                 model = KNeighborsClassifier(n_neighbors=k)
@@ -35,37 +46,84 @@ def cross_validation(X_train, y_train, cv_params, features_permute=False,powerse
                     'mean': scores.mean(),
                     'std': scores.std(),
                 }
-            # break
+                    # break
 
     elif cv_params['model_name'] == "SVM":
+        l=5
         for features_comb in features_list[1:]:
-            if len(features_comb) != powerset_size:
+            if len(features_comb) not in powerset_size:
                 continue
+            print("calculating for "+str(features_comb))
             total_scores[str(features_comb)] = {}
-            for kernel in cv_params['kernel_list']:
-                for c in cv_params['c_list']:
-                    model = SVC(C=c,kernel=kernel)
-                    scores = cross_val_score(model, X_train, y_train, cv=10)
-                    total_scores[str(features_comb)]['kernel: {}, C: {}'.format(kernel,c)] = {
-                        'mean': scores.mean(),
-                        'std': scores.std(),
-                        # 'comb': features_comb,
-                    }
+            if False:
+                for kernel in cv_params['kernel_list']:
+                    for c in cv_params['c_list']:
+                        model = SVC(C=c,kernel=kernel)
+                        scores = cross_val_score(model, X_train[:,features_comb], y_train, cv=10)
+                        total_scores[str(features_comb)]['kernel: {}, C: {}'.format(kernel,c)] = {
+                            'mean': scores.mean(),
+                            'std': scores.std(),
+                            # 'comb': features_comb,
+                        }
+            else:
+                model = SVC(kernel='linear')
+                scores = cross_val_score(model, X_train[:,features_comb], y_train, cv=10)
+                total_scores[str(features_comb)]= {
+                            'mean': scores.mean(),
+                            'std': scores.std(),
+                            }
+            if len(features_comb) > l:
+                with open(os.path.join('.','{}_cv_{}.json'.format(cv_params['model_name'],len(features_comb))), 'w') as json_file:
+                    json.dump(total_scores,json_file)
+                l+=1
 
     elif cv_params['model_name'] == "DCT":
         for features_comb in features_list[1:]:
-            if len(features_comb) != powerset_size:
+            if len(features_comb) not in powerset_size:
                 continue
             total_scores[str(features_comb)] = {}
-            for min_split in cv_params['min_samples_split']:
-                model = DecisionTreeClassifier(min_samples_split=min_split)
-                scores = cross_val_score(model, X_train, y_train, cv=10)
-                total_scores[str(features_comb)]['min_samples_split: {}'.format(min_split)] = {
-                    'mean': scores.mean(),
-                    'std': scores.std(),
-                    # 'comb': features_comb,
+            if False:
+                for min_split in cv_params['min_samples_split']:
+                    model = DecisionTreeClassifier(min_samples_split=min_split)
+                    scores = cross_val_score(model, X_train[:,features_comb], y_train, cv=10)
+                    total_scores[str(features_comb)]['min_samples_split: {}'.format(min_split)] = {
+                        'mean': scores.mean(),
+                        'std': scores.std(),
+                        # 'comb': features_comb,
+                       }
 
-                }
+            else:
+                model = DecisionTreeClassifier()
+                scores = cross_val_score(model, X_train[:,features_comb], y_train, cv=10)
+                total_scores[str(features_comb)]= {
+                            'mean': scores.mean(),
+                            'std': scores.std(),
+                            }
+ 
+    elif cv_params['model_name'] == "RF":
+        for features_comb in features_list[1:]:
+            if len(features_comb) not in powerset_size:
+                continue
+            total_scores[str(features_comb)] = {}
+            if False:
+                # for min_split in cv_params['min_samples_split']:
+                #     model = RandomForestClassifier(n_estimators=)
+                #     scores = cross_val_score(model, X_train[:,features_comb], y_train, cv=10)
+                #     total_scores[str(features_comb)]['min_samples_split: {}'.format(min_split)] = {
+                #         'mean': scores.mean(),
+                #         'std': scores.std(),
+                #        }
+                pass
+            else:
+                model = RandomForestClassifier()
+                scores = cross_val_score(model, X_train[:,features_comb], y_train, cv=10)
+                total_scores[str(features_comb)]= {
+                            'mean': scores.mean(),
+                            'std': scores.std(),
+                            }
+ 
+
+
     with open(os.path.join('.','{}_cv.json'.format(cv_params['model_name'])), 'w') as json_file:
         json.dump(total_scores,json_file)
 
